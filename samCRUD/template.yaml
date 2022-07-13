@@ -1,0 +1,144 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: crud-app
+
+Parameters:
+  StageName:
+    Type: String
+    Default: Dev
+
+Globals:
+  Function:
+    Timeout: 5
+
+Resources:
+  ApiGatewayCrud:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: !Ref StageName
+      Name: CrudApi
+      Cors:
+        AllowOrigin: "'*'"
+        AllowMethods: "'*'"
+
+  GetEmployee:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: lambda/getEmployee
+      Handler: index.handler
+      Runtime: nodejs14.x
+      Architectures:
+        - x86_64
+      Events:
+        getEmployee:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ApiGatewayCrud
+            Path: /getEmployee/{id}
+            Method: GET
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref employeesTable
+
+
+
+  CreateEmployee:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: CreateEmployee
+      CodeUri: lambda/createEmployee
+      Handler: index.handler
+      Runtime: nodejs14.x
+      Architectures:
+        - x86_64
+      Events:
+        createEmployee:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ApiGatewayCrud
+            Path: /createEmployee
+            Method: POST
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref employeesTable
+
+  GetAllEmployee:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: GetAllEmployee
+      CodeUri: lambda/getAllEmployee
+      Handler: index.handler
+      Runtime: nodejs14.x
+
+      Architectures:
+        - x86_64
+      Events:
+        createEmployee:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ApiGatewayCrud
+            Path: /getAllEmployee
+            Method: GET
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref employeesTable
+
+  UpdateEmployee:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: UpdateEmployee
+      CodeUri: lambda/updateEmployee
+      Handler: index.handler
+      Runtime: nodejs14.x
+      Architectures:
+        - x86_64
+      Events:
+        createEmployee:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ApiGatewayCrud
+            Path: /updateEmployee/{id}
+            Method: PUT
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref employeesTable
+  DeleteEmployee:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: DeleteEmployee
+      CodeUri: lambda/deleteEmployee
+      Handler: index.handler
+      Runtime: nodejs14.x
+      Architectures:
+        - x86_64
+      Events:
+        deleteEmployee:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ApiGatewayCrud
+            Path: /deleteEmployee/{id}
+            Method: DELETE
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref employeesTable
+
+  employeesTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: employeeDB
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+      ProvisionedThroughput:
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 5
+
+
+Outputs:
+  ApiOutput:
+    Description: "api url"
+    Value: !Sub "https://${ApiGatewayCrud}.execute-api.${AWS::Region}.amazonaws.com/${StageName}"
+
